@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Scheduler</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="notification-area" id="notificationArea"></div>
+
+<div class="container">
+    <h1>📅 Task Scheduler</h1>
+
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('add')">Add Task</button>
+        <button class="tab" onclick="showTab('view')">View Tasks</button>
+        <button class="tab" onclick="showTab('search')">Search Task</button>
+        <button class="tab" onclick="showTab('stats')">Statistics</button>
+    </div>
+
+    <!-- Add Task Tab -->
+    <div id="add" class="tab-content active">
+        <div class="form-container">
+            <h2>Add New Task</h2>
+            <form id="taskForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="description">Description *</label>
+                        <input type="text" id="description" name="description" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category">
+                            <option value="Work">Work</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Health">Health</option>
+                            <option value="Education">Education</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startTime">Start Time *</label>
+                        <input type="datetime-local" id="startTime" name="startTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">End Time *</label>
+                        <input type="datetime-local" id="endTime" name="endTime" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes" placeholder="Optional notes..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Add Task</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Tasks Tab -->
+    <div id="view" class="tab-content">
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTasks">0</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedTasks">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingTasks">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="highPriorityTasks">0</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>All Tasks</h2>
+            <button class="btn btn-primary" onclick="loadTasks()">🔄 Refresh</button>
+        </div>
+        <div id="tasksContainer" class="tasks-container"></div>
+    </div>
+
+    <!-- Search Task Tab -->
+    <div id="search" class="tab-content">
+        <div class="search-container">
+            <input type="number" id="searchId" placeholder="Enter Task ID" min="1">
+            <button class="btn btn-primary" onclick="searchTask()">🔍 Search</button>
+        </div>
+        <div id="searchResults" class="tasks-container"></div>
+    </div>
+
+    <!-- Statistics Tab -->
+    <div id="stats" class="tab-content">
+        <h2>Task Statistics</h2>
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="workTasks">0</div>
+                <div class="stat-label">Work Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="personalTasks">0</div>
+                <div class="stat-label">Personal Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayTasks">0</div>
+                <div class="stat-label">Today's Tasks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="overdueTasks">0</div>
+                <div class="stat-label">Overdue Tasks</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 600px; max-height: 90%; overflow-y: auto;">
+        <h2>Edit Task</h2>
+        <form id="editTaskForm">
+            <input type="hidden" id="editTaskId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editDescription">Description *</label>
+                    <input type="text" id="editDescription" name="description" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCategory">Category</label>
+                    <select id="editCategory" name="category">
+                        <option value="Work">Work</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Health">Health</option>
+                        <option value="Education">Education</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editStartTime">Start Time *</label>
+                    <input type="datetime-local" id="editStartTime" name="startTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEndTime">End Time *</label>
+                    <input type="datetime-local" id="editEndTime" name="endTime" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editPriority">Priority</label>
+                    <select id="editPriority" name="priority">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editNotes">Notes</label>
+                    <textarea id="editNotes" name="notes"></textarea>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
