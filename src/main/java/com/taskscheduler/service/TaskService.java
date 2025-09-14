@@ -1,98 +1,56 @@
 package com.taskscheduler.service;
 
-import com.taskscheduler.dto.TaskDTO;
 import com.taskscheduler.entity.Task;
 import com.taskscheduler.repository.TaskRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
-    @Autowired
-    private TaskRepository taskRepository;
+    private final TaskRepository taskRepository;
 
-    // Convert Entity to DTO
-    private TaskDTO convertToDTO(Task task) {
-        return new TaskDTO(
-                task.getId(),
-                task.getDescription(),
-                task.getStartTime(),
-                task.getEndTime(),
-                task.getDone(),
-                task.getPriority(),
-                task.getCategory(),
-                task.getNotes()
-        );
+    public TaskService(TaskRepository taskRepository) {
+        this.taskRepository = taskRepository;
     }
 
-    // Convert DTO to Entity
-    private Task convertToEntity(TaskDTO taskDTO) {
-        Task task = new Task();
-        task.setId(taskDTO.getId());
-        task.setDescription(taskDTO.getDescription());
-        task.setStartTime(taskDTO.getStartTime());
-        task.setEndTime(taskDTO.getEndTime());
-        task.setDone(taskDTO.getDone() != null ? taskDTO.getDone() : false);
-        task.setPriority(taskDTO.getPriority() != null ? taskDTO.getPriority() : "Medium");
-        task.setCategory(taskDTO.getCategory() != null ? taskDTO.getCategory() : "Personal");
-        task.setNotes(taskDTO.getNotes());
-        return task;
+    public Task addTask(Task task) {
+        task.setDone(false);
+        task.setId(null);
+        return taskRepository.save(task);
     }
 
-    // Add new task
-    public TaskDTO addTask(TaskDTO taskDTO) {
-        Task task = convertToEntity(taskDTO);
-        task.setDone(false); // Ensure new tasks are not done by default
-        Task savedTask = taskRepository.save(task);
-        return convertToDTO(savedTask);
+    public List<Task> getAllTasks() {
+        return taskRepository.findAll();
     }
 
-    // Get all tasks
-    public List<TaskDTO> getAllTasks() {
-        List<Task> tasks = taskRepository.findAll();
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public Optional<Task> getTaskById(Long id) {
+        return taskRepository.findById(id);
     }
 
-    // Get task by ID
-    public TaskDTO getTaskById(Long id) {
-        Optional<Task> task = taskRepository.findById(id);
-        return task.map(this::convertToDTO).orElse(null);
-    }
 
-    // Update task
-    public TaskDTO updateTask(Long id, TaskDTO taskDTO) {
-        Optional<Task> existingTaskOpt = taskRepository.findById(id);
-        if (existingTaskOpt.isPresent()) {
-            Task existingTask = existingTaskOpt.get();
+    public Optional<Task> updateTask(Long id, Task taskDetails) {
+        return taskRepository.findById(id).map(existingTask -> {
+            existingTask.setDescription(taskDetails.getDescription());
+            existingTask.setStartTime(taskDetails.getStartTime());
+            existingTask.setEndTime(taskDetails.getEndTime());
+            existingTask.setPriority(taskDetails.getPriority());
+            existingTask.setCategory(taskDetails.getCategory());
+            existingTask.setNotes(taskDetails.getNotes());
 
-            // Update fields
-            existingTask.setDescription(taskDTO.getDescription());
-            existingTask.setStartTime(taskDTO.getStartTime());
-            existingTask.setEndTime(taskDTO.getEndTime());
-            existingTask.setPriority(taskDTO.getPriority());
-            existingTask.setCategory(taskDTO.getCategory());
-            existingTask.setNotes(taskDTO.getNotes());
-
-            // Preserve the existing 'done' status unless explicitly provided
-            if (taskDTO.getDone() != null) {
-                existingTask.setDone(taskDTO.getDone());
+            if (taskDetails.getDone() != null) {
+                existingTask.setDone(taskDetails.getDone());
             }
-
-            Task updatedTask = taskRepository.save(existingTask);
-            return convertToDTO(updatedTask);
-        }
-        return null;
+            return taskRepository.save(existingTask);
+        });
     }
 
-    // Delete task
+
     public boolean deleteTask(Long id) {
         if (taskRepository.existsById(id)) {
             taskRepository.deleteById(id);
@@ -101,95 +59,67 @@ public class TaskService {
         return false;
     }
 
-    // Toggle task completion status
-    public TaskDTO toggleTaskStatus(Long id) {
-        Optional<Task> taskOpt = taskRepository.findById(id);
-        if (taskOpt.isPresent()) {
-            Task task = taskOpt.get();
+    public Optional<Task> toggleTaskStatus(Long id) {
+        return taskRepository.findById(id).map(task -> {
             task.setDone(!task.getDone());
-            Task updatedTask = taskRepository.save(task);
-            return convertToDTO(updatedTask);
-        }
-        return null;
+            return taskRepository.save(task);
+        });
     }
 
-    // Get tasks by completion status
-    public List<TaskDTO> getTasksByStatus(boolean done) {
-        List<Task> tasks = taskRepository.findByDone(done);
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<Task> getTasksByStatus(boolean done) {
+        return taskRepository.findByDone(done);
     }
 
-    // Get tasks by priority
-    public List<TaskDTO> getTasksByPriority(String priority) {
-        List<Task> tasks = taskRepository.findByPriority(priority);
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<Task> getTasksByPriority(String priority) {
+        return taskRepository.findByPriority(priority);
     }
 
-    // Get tasks by category
-    public List<TaskDTO> getTasksByCategory(String category) {
-        List<Task> tasks = taskRepository.findByCategory(category);
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<Task> getTasksByCategory(String category) {
+        return taskRepository.findByCategory(category);
     }
 
-    // Get overdue tasks
-    public List<TaskDTO> getOverdueTasks() {
-        List<Task> tasks = taskRepository.findOverdueTasks(LocalDateTime.now());
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<Task> getOverdueTasks() {
+        return taskRepository.findOverdueTasks(LocalDateTime.now());
     }
 
-    // Get today's tasks
-    public List<TaskDTO> getTodayTasks() {
-        List<Task> tasks = taskRepository.findTodayTasks(LocalDateTime.now());
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public List<Task> getTodayTasks() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        return taskRepository.findTasksBetween(startOfDay, endOfDay);
     }
 
-    // Get tasks starting soon (next hour)
-    public List<TaskDTO> getTasksStartingSoon() {
+    public List<Task> getTasksStartingSoon() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime oneHourLater = now.plusHours(1);
-        List<Task> tasks = taskRepository.findTasksStartingSoon(now, oneHourLater);
-        return tasks.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return taskRepository.findTasksStartingSoon(now, oneHourLater);
     }
 
-    // Get task statistics
     public TaskStatistics getTaskStatistics() {
         long totalTasks = taskRepository.count();
         long completedTasks = taskRepository.countByDone(true);
-        long pendingTasks = taskRepository.countByDone(false);
+        long pendingTasks = totalTasks - completedTasks;
         long highPriorityTasks = taskRepository.countByPriority("High");
         long workTasks = taskRepository.countByCategory("Work");
         long personalTasks = taskRepository.countByCategory("Personal");
-
-        List<Task> todayTasks = taskRepository.findTodayTasks(LocalDateTime.now());
-        List<Task> overdueTasks = taskRepository.findOverdueTasks(LocalDateTime.now());
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        long todayTasks = taskRepository.countTasksBetween(startOfDay, endOfDay);
+        long overdueTasks = taskRepository.countOverdueTasks(LocalDateTime.now());
 
         return new TaskStatistics(totalTasks, completedTasks, pendingTasks,
                 highPriorityTasks, workTasks, personalTasks,
-                todayTasks.size(), overdueTasks.size());
+                todayTasks, overdueTasks);
     }
 
-    // Inner class for statistics
     public static class TaskStatistics {
-        private long totalTasks;
-        private long completedTasks;
-        private long pendingTasks;
-        private long highPriorityTasks;
-        private long workTasks;
-        private long personalTasks;
-        private long todayTasks;
-        private long overdueTasks;
+        private final long totalTasks;
+        private final long completedTasks;
+        private final long pendingTasks;
+        private final long highPriorityTasks;
+        private final long workTasks;
+        private final long personalTasks;
+        private final long todayTasks;
+        private final long overdueTasks;
 
         public TaskStatistics(long totalTasks, long completedTasks, long pendingTasks,
                               long highPriorityTasks, long workTasks, long personalTasks,
@@ -204,7 +134,7 @@ public class TaskService {
             this.overdueTasks = overdueTasks;
         }
 
-        // Getters
+
         public long getTotalTasks() { return totalTasks; }
         public long getCompletedTasks() { return completedTasks; }
         public long getPendingTasks() { return pendingTasks; }

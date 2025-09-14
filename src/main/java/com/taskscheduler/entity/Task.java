@@ -31,10 +31,8 @@ public class Task {
     @Column(length = 1000)
     private String notes;
 
-    // Default constructor
     public Task() {}
 
-    // Constructor with required fields
     public Task(String description, LocalDateTime startTime, LocalDateTime endTime) {
         this.description = description;
         this.startTime = startTime;
@@ -44,7 +42,7 @@ public class Task {
         this.category = "Personal";
     }
 
-    // Getters and Setters
+
     public Long getId() {
         return id;
     }

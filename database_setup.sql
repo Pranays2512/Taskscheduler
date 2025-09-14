@@ -1,8 +1,6 @@
--- Create database
 CREATE DATABASE IF NOT EXISTS task_scheduler;
 USE task_scheduler;
 
--- Create tasks table (This will be auto-created by Hibernate, but here for reference)
 CREATE TABLE IF NOT EXISTS tasks (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     description VARCHAR(255) NOT NULL,
@@ -16,7 +14,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Insert sample data for testing
+
 INSERT INTO tasks (description, start_time, end_time, priority, category, notes, done) VALUES
 ('Complete Spring Boot project', '2024-12-07 09:00:00', '2024-12-07 17:00:00', 'High', 'Work', 'Implement all CRUD operations', FALSE),
 ('Grocery shopping', '2024-12-07 18:00:00', '2024-12-07 19:30:00', 'Medium', 'Personal', 'Buy vegetables, milk, and bread', FALSE),

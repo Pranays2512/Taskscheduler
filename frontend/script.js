@@ -2,7 +2,6 @@ const API_BASE = 'http://localhost:8080/api/tasks';
 let tasks = [];
 let notificationTimeouts = [];
 
-// Tab functionality
 function showTab(tabName) {
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
@@ -16,11 +15,9 @@ function showTab(tabName) {
     if (tabName === 'view') {
         loadTasks();
     } else if (tabName === 'stats') {
-        updateStatistics();
     }
 }
 
-// Notification system
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -36,7 +33,6 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Check for task notifications
 function checkTaskNotifications() {
     const now = new Date();
     tasks.forEach(task => {
@@ -44,13 +40,11 @@ function checkTaskNotifications() {
             const startTime = new Date(task.startTime);
             const endTime = new Date(task.endTime);
 
-            // Check if task is starting now (within 1 minute)
             if (Math.abs(startTime - now) <= 60000 && !task.startNotified) {
                 showNotification(`Task "${task.description}" is starting now!`, 'alert');
                 task.startNotified = true;
             }
 
-            // Check if task is ending now (within 1 minute)
             if (Math.abs(endTime - now) <= 60000 && !task.endNotified) {
                 showNotification(`Task "${task.description}" is ending now!`, 'alert');
                 task.endNotified = true;
@@ -59,10 +53,8 @@ function checkTaskNotifications() {
     });
 }
 
-// Start notification checking
-setInterval(checkTaskNotifications, 30000); // Check every 30 seconds
+setInterval(checkTaskNotifications, 30000);
 
-// Form submission
 document.getElementById('taskForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -80,25 +72,23 @@ document.getElementById('taskForm').addEventListener('submit', async (e) => {
     try {
         const response = await fetch(`${API_BASE}/add`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskData)
         });
 
         if (response.ok) {
             showNotification('Task added successfully!');
             resetForm();
-            loadTasks();
+            showTab('view');
         } else {
-            showNotification('Failed to add task', 'alert');
+            const errorData = await response.json();
+            showNotification(`Failed to add task: ${errorData.message || 'Unknown error'}`, 'alert');
         }
     } catch (error) {
         showNotification('Error connecting to server', 'alert');
     }
 });
 
-// Edit form submission
 document.getElementById('editTaskForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -117,9 +107,7 @@ document.getElementById('editTaskForm').addEventListener('submit', async (e) => 
     try {
         const response = await fetch(`${API_BASE}/edit/${taskId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskData)
         });
 
@@ -128,7 +116,8 @@ document.getElementById('editTaskForm').addEventListener('submit', async (e) => 
             closeEditModal();
             loadTasks();
         } else {
-            showNotification('Failed to update task', 'alert');
+            const errorData = await response.json();
+            showNotification(`Failed to update task: ${errorData.message || 'Unknown error'}`, 'alert');
         }
     } catch (error) {
         showNotification('Error connecting to server', 'alert');
@@ -154,8 +143,8 @@ async function loadTasks() {
     }
 }
 
-function displayTasks(tasksToShow) {
-    const container = document.getElementById('tasksContainer');
+function displayTasks(tasksToShow, containerId = 'tasksContainer') {
+    const container = document.getElementById(containerId);
     container.innerHTML = '';
 
     if (tasksToShow.length === 0) {
@@ -169,29 +158,18 @@ function displayTasks(tasksToShow) {
         taskCard.innerHTML = `
             <div class="task-header">
                 <div class="task-title">${task.description}</div>
+                <div class="task-id">ID: ${task.id}</div>
                 <div class="task-status ${task.done ? 'done' : 'pending'}">
                     ${task.done ? 'Completed' : 'Pending'}
                 </div>
             </div>
-
             <div class="task-details">
-                <div class="task-detail">
-                    <strong>Start:</strong> ${new Date(task.startTime).toLocaleString()}
-                </div>
-                <div class="task-detail">
-                    <strong>End:</strong> ${new Date(task.endTime).toLocaleString()}
-                </div>
-                <div class="task-detail">
-                    <strong>Priority:</strong>
-                    <span class="priority-${task.priority.toLowerCase()}">${task.priority}</span>
-                </div>
-                <div class="task-detail">
-                    <strong>Category:</strong> ${task.category}
-                </div>
+                <div class="task-detail"><strong>Start:</strong> ${new Date(task.startTime).toLocaleString()}</div>
+                <div class="task-detail"><strong>End:</strong> ${new Date(task.endTime).toLocaleString()}</div>
+                <div class="task-detail"><strong>Priority:</strong> <span class="priority-${task.priority.toLowerCase()}">${task.priority}</span></div>
+                <div class="task-detail"><strong>Category:</strong> ${task.category}</div>
             </div>
-
             ${task.notes ? `<div class="task-detail" style="margin-top: 10px;"><strong>Notes:</strong> ${task.notes}</div>` : ''}
-
             <div class="task-actions">
                 <button class="btn btn-secondary" onclick="editTask(${task.id})">✏️ Edit</button>
                 <button class="btn ${task.done ? 'btn-secondary' : 'btn-success'}" onclick="toggleTaskStatus(${task.id})">
@@ -204,12 +182,14 @@ function displayTasks(tasksToShow) {
     });
 }
 
+// ✨ FIX: This is now the one and only version of this function.
+function displaySearchResults(searchResults) {
+    displayTasks(searchResults, 'searchResults');
+}
+
 async function toggleTaskStatus(taskId) {
     try {
-        const response = await fetch(`${API_BASE}/toggle/${taskId}`, {
-            method: 'PUT'
-        });
-
+        const response = await fetch(`${API_BASE}/toggle/${taskId}`, { method: 'PUT' });
         if (response.ok) {
             showNotification('Task status updated!');
             loadTasks();
@@ -224,10 +204,7 @@ async function toggleTaskStatus(taskId) {
 async function deleteTask(taskId) {
     if (confirm('Are you sure you want to delete this task?')) {
         try {
-            const response = await fetch(`${API_BASE}/delete/${taskId}`, {
-                method: 'DELETE'
-            });
-
+            const response = await fetch(`${API_BASE}/delete/${taskId}`, { method: 'DELETE' });
             if (response.ok) {
                 showNotification('Task deleted successfully!');
                 loadTasks();
@@ -259,6 +236,7 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
+// ✨ FIX: Improved search function for better UX.
 async function searchTask() {
     const taskId = document.getElementById('searchId').value;
     if (!taskId) {
@@ -270,32 +248,20 @@ async function searchTask() {
         const response = await fetch(`${API_BASE}/get/${taskId}`);
         if (response.ok) {
             const task = await response.json();
-            displaySearchResults([task]);
+            displaySearchResults([task]); // Display the found task
         } else if (response.status === 404) {
+            // The displayTasks function will show the "No tasks found" message,
+            // so the notification is redundant.
             displaySearchResults([]);
-            showNotification('Task not found', 'alert');
         } else {
-            showNotification('Failed to search task', 'alert');
+            showNotification('Failed to search for task', 'alert');
         }
     } catch (error) {
         showNotification('Error connecting to server', 'alert');
     }
 }
 
-function displaySearchResults(searchResults) {
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '';
-
-    if (searchResults.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #718096; font-size: 18px; padding: 40px;">No task found with the given ID</p>';
-        return;
-    }
-
-    displayTasks(searchResults);
-    // Update the container reference for search results
-    const tasksContainer = container;
-    tasksContainer.innerHTML = container.innerHTML;
-}
+// ✨ DELETED: The second, buggy version of displaySearchResults was removed from here.
 
 function updateStatistics() {
     const total = tasks.length;
@@ -321,20 +287,17 @@ function updateStatistics() {
     document.getElementById('overdueTasks').textContent = overdue;
 }
 
-// Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    loadTasks();
+    showTab('view'); // Start on the view tab
 
-    // Set default datetime values
     const now = new Date();
-    const startTime = new Date(now.getTime() + 60000); // 1 minute from now
-    const endTime = new Date(now.getTime() + 3600000); // 1 hour from now
+    const startTime = new Date(now.getTime() + 60000);
+    const endTime = new Date(now.getTime() + 3600000);
 
     document.getElementById('startTime').value = startTime.toISOString().slice(0, 16);
     document.getElementById('endTime').value = endTime.toISOString().slice(0, 16);
 });
 
-// Close modal when clicking outside
 document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeEditModal();

@@ -1,6 +1,6 @@
 package com.taskscheduler.controller;
 
-import com.taskscheduler.dto.TaskDTO;
+import com.taskscheduler.entity.Task;
 import com.taskscheduler.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -8,68 +8,67 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
+@CrossOrigin(origins = "*")
 @RequestMapping("/api/tasks")
-@CrossOrigin(origins = "*") // Allow CORS for frontend
 public class TaskController {
-
     @Autowired
-    private TaskService taskService;
+    private final TaskService taskService;
 
-    // Add new task
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
+    }
+
     @PostMapping("/add")
-    public ResponseEntity<TaskDTO> addTask(@RequestBody TaskDTO taskDTO) {
+    public ResponseEntity<?> addTask(@RequestBody Task task) {
         try {
-            TaskDTO savedTask = taskService.addTask(taskDTO);
+            Task savedTask = taskService.addTask(task);
             return new ResponseEntity<>(savedTask, HttpStatus.CREATED);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error adding task: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get all tasks
     @GetMapping("/all")
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
+    public ResponseEntity<?> getAllTasks() {
         try {
-            List<TaskDTO> tasks = taskService.getAllTasks();
+            List<Task> tasks = taskService.getAllTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get task by ID
     @GetMapping("/get/{id}")
-    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id) {
+    public ResponseEntity<?> getTaskById(@PathVariable Long id) {
         try {
-            TaskDTO task = taskService.getTaskById(id);
-            if (task != null) {
-                return new ResponseEntity<>(task, HttpStatus.OK);
+            Optional<Task> taskOptional = taskService.getTaskById(id);
+            if (taskOptional.isPresent()) {
+                return new ResponseEntity<>(taskOptional.get(), HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Task not found with id: " + id, HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching task: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Update task
     @PutMapping("/edit/{id}")
-    public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskDTO taskDTO) {
+    public ResponseEntity<?> updateTask(@PathVariable Long id, @RequestBody Task task) {
         try {
-            TaskDTO updatedTask = taskService.updateTask(id, taskDTO);
-            if (updatedTask != null) {
-                return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+            Optional<Task> updatedTaskOptional = taskService.updateTask(id, task);
+            if (updatedTaskOptional.isPresent()) {
+                return new ResponseEntity<>(updatedTaskOptional.get(), HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Task not found with id: " + id, HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error updating task: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Delete task
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteTask(@PathVariable Long id) {
         try {
@@ -77,102 +76,95 @@ public class TaskController {
             if (deleted) {
                 return new ResponseEntity<>("Task deleted successfully", HttpStatus.OK);
             } else {
-                return new ResponseEntity<>("Task not found", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Task not found with id: " + id, HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>("Error deleting task", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error deleting task: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Toggle task completion status
     @PutMapping("/toggle/{id}")
-    public ResponseEntity<TaskDTO> toggleTaskStatus(@PathVariable Long id) {
+    public ResponseEntity<?> toggleTaskStatus(@PathVariable Long id) {
         try {
-            TaskDTO updatedTask = taskService.toggleTaskStatus(id);
-            if (updatedTask != null) {
-                return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+            Optional<Task> updatedTaskOptional = taskService.toggleTaskStatus(id);
+
+            if (updatedTaskOptional.isPresent()) {
+                return new ResponseEntity<>(updatedTaskOptional.get(), HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Task not found with id: " + id, HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error updating task status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get tasks by status
     @GetMapping("/status/{done}")
-    public ResponseEntity<List<TaskDTO>> getTasksByStatus(@PathVariable boolean done) {
+    public ResponseEntity<?> getTasksByStatus(@PathVariable boolean done) {
         try {
-            List<TaskDTO> tasks = taskService.getTasksByStatus(done);
+            List<Task> tasks = taskService.getTasksByStatus(done);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching tasks by status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get tasks by priority
     @GetMapping("/priority/{priority}")
-    public ResponseEntity<List<TaskDTO>> getTasksByPriority(@PathVariable String priority) {
+    public ResponseEntity<?> getTasksByPriority(@PathVariable String priority) {
         try {
-            List<TaskDTO> tasks = taskService.getTasksByPriority(priority);
+            List<Task> tasks = taskService.getTasksByPriority(priority);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching tasks by priority: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get tasks by category
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<TaskDTO>> getTasksByCategory(@PathVariable String category) {
+    public ResponseEntity<?> getTasksByCategory(@PathVariable String category) {
         try {
-            List<TaskDTO> tasks = taskService.getTasksByCategory(category);
+            List<Task> tasks = taskService.getTasksByCategory(category);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching tasks by category: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get overdue tasks
     @GetMapping("/overdue")
-    public ResponseEntity<List<TaskDTO>> getOverdueTasks() {
+    public ResponseEntity<?> getOverdueTasks() {
         try {
-            List<TaskDTO> tasks = taskService.getOverdueTasks();
+            List<Task> tasks = taskService.getOverdueTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching overdue tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get today's tasks
     @GetMapping("/today")
-    public ResponseEntity<List<TaskDTO>> getTodayTasks() {
+    public ResponseEntity<?> getTodayTasks() {
         try {
-            List<TaskDTO> tasks = taskService.getTodayTasks();
+            List<Task> tasks = taskService.getTodayTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching today's tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get tasks starting soon
     @GetMapping("/starting-soon")
-    public ResponseEntity<List<TaskDTO>> getTasksStartingSoon() {
+    public ResponseEntity<?> getTasksStartingSoon() {
         try {
-            List<TaskDTO> tasks = taskService.getTasksStartingSoon();
+            List<Task> tasks = taskService.getTasksStartingSoon();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching upcoming tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Get task statistics
     @GetMapping("/statistics")
-    public ResponseEntity<TaskService.TaskStatistics> getTaskStatistics() {
+    public ResponseEntity<?> getTaskStatistics() {
         try {
             TaskService.TaskStatistics stats = taskService.getTaskStatistics();
             return new ResponseEntity<>(stats, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Error fetching statistics: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
