@@ -261,7 +261,7 @@ async function searchTask() {
     }
 }
 
-// ✨ DELETED: The second, buggy version of displaySearchResults was removed from here.
+
 
 function updateStatistics() {
     const total = tasks.length;
@@ -288,8 +288,7 @@ function updateStatistics() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    showTab('view'); // Start on the view tab
-
+    showTab('view');
     const now = new Date();
     const startTime = new Date(now.getTime() + 60000);
     const endTime = new Date(now.getTime() + 3600000);

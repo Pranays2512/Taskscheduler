@@ -1,6 +1,6 @@
 package com.taskscheduler.controller;
 
-import com.taskscheduler.entity.Task;
+import com.taskscheduler.dto.TaskDTO;
 import com.taskscheduler.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,9 +22,9 @@ public class TaskController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addTask(@RequestBody Task task) {
+    public ResponseEntity<?> addTask(@RequestBody TaskDTO task) {
         try {
-            Task savedTask = taskService.addTask(task);
+            TaskDTO savedTask = taskService.addTask(task);
             return new ResponseEntity<>(savedTask, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>("Error adding task: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -34,7 +34,7 @@ public class TaskController {
     @GetMapping("/all")
     public ResponseEntity<?> getAllTasks() {
         try {
-            List<Task> tasks = taskService.getAllTasks();
+            List<TaskDTO> tasks = taskService.getAllTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -44,7 +44,7 @@ public class TaskController {
     @GetMapping("/get/{id}")
     public ResponseEntity<?> getTaskById(@PathVariable Long id) {
         try {
-            Optional<Task> taskOptional = taskService.getTaskById(id);
+            Optional<TaskDTO> taskOptional = taskService.getTaskById(id);
             if (taskOptional.isPresent()) {
                 return new ResponseEntity<>(taskOptional.get(), HttpStatus.OK);
             } else {
@@ -56,9 +56,9 @@ public class TaskController {
     }
 
     @PutMapping("/edit/{id}")
-    public ResponseEntity<?> updateTask(@PathVariable Long id, @RequestBody Task task) {
+    public ResponseEntity<?> updateTask(@PathVariable Long id, @RequestBody TaskDTO task) {
         try {
-            Optional<Task> updatedTaskOptional = taskService.updateTask(id, task);
+            Optional<TaskDTO> updatedTaskOptional = taskService.updateTask(id, task);
             if (updatedTaskOptional.isPresent()) {
                 return new ResponseEntity<>(updatedTaskOptional.get(), HttpStatus.OK);
             } else {
@@ -86,7 +86,7 @@ public class TaskController {
     @PutMapping("/toggle/{id}")
     public ResponseEntity<?> toggleTaskStatus(@PathVariable Long id) {
         try {
-            Optional<Task> updatedTaskOptional = taskService.toggleTaskStatus(id);
+            Optional<TaskDTO> updatedTaskOptional = taskService.toggleTaskStatus(id);
 
             if (updatedTaskOptional.isPresent()) {
                 return new ResponseEntity<>(updatedTaskOptional.get(), HttpStatus.OK);
@@ -101,7 +101,7 @@ public class TaskController {
     @GetMapping("/status/{done}")
     public ResponseEntity<?> getTasksByStatus(@PathVariable boolean done) {
         try {
-            List<Task> tasks = taskService.getTasksByStatus(done);
+            List<TaskDTO> tasks = taskService.getTasksByStatus(done);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching tasks by status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -111,7 +111,7 @@ public class TaskController {
     @GetMapping("/priority/{priority}")
     public ResponseEntity<?> getTasksByPriority(@PathVariable String priority) {
         try {
-            List<Task> tasks = taskService.getTasksByPriority(priority);
+            List<TaskDTO> tasks = taskService.getTasksByPriority(priority);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching tasks by priority: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -121,7 +121,7 @@ public class TaskController {
     @GetMapping("/category/{category}")
     public ResponseEntity<?> getTasksByCategory(@PathVariable String category) {
         try {
-            List<Task> tasks = taskService.getTasksByCategory(category);
+            List<TaskDTO> tasks = taskService.getTasksByCategory(category);
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching tasks by category: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -131,7 +131,7 @@ public class TaskController {
     @GetMapping("/overdue")
     public ResponseEntity<?> getOverdueTasks() {
         try {
-            List<Task> tasks = taskService.getOverdueTasks();
+            List<TaskDTO> tasks = taskService.getOverdueTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching overdue tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -141,7 +141,7 @@ public class TaskController {
     @GetMapping("/today")
     public ResponseEntity<?> getTodayTasks() {
         try {
-            List<Task> tasks = taskService.getTodayTasks();
+            List<TaskDTO> tasks = taskService.getTodayTasks();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching today's tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -151,7 +151,7 @@ public class TaskController {
     @GetMapping("/starting-soon")
     public ResponseEntity<?> getTasksStartingSoon() {
         try {
-            List<Task> tasks = taskService.getTasksStartingSoon();
+            List<TaskDTO> tasks = taskService.getTasksStartingSoon();
             return new ResponseEntity<>(tasks, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error fetching upcoming tasks: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
