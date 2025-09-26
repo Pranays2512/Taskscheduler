@@ -2,6 +2,7 @@ package com.taskscheduler.service;
 
 import com.taskscheduler.entity.Task;
 import com.taskscheduler.repository.TaskRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -12,7 +13,7 @@ import java.util.Optional;
 
 @Service
 public class TaskService {
-
+    @Autowired
     private final TaskRepository taskRepository;
 
     public TaskService(TaskRepository taskRepository) {
