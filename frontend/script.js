@@ -1,8 +1,238 @@
-const API_BASE = 'http://localhost:8080/api/tasks';
+const API_BASE = 'http://localhost:8080/api';
 let tasks = [];
 let notificationTimeouts = [];
+let isAuthenticated = false;
+let currentUser = null;
+let authToken = null;
+
+// Authentication functions
+function checkAuthStatus() {
+    const storedUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+    const token = sessionStorage.getItem('authToken');
+
+    if (storedUser && token) {
+        authToken = token;
+        currentUser = storedUser;
+
+        // Validate token with server
+        validateTokenWithServer(token).then(isValid => {
+            if (isValid) {
+                isAuthenticated = true;
+                showMainApp();
+            } else {
+                clearAuthData();
+                showWelcomeScreen();
+            }
+        }).catch(() => {
+            clearAuthData();
+            showWelcomeScreen();
+        });
+    } else {
+        isAuthenticated = false;
+        currentUser = null;
+        authToken = null;
+        showWelcomeScreen();
+    }
+}
+
+async function validateTokenWithServer(token) {
+    try {
+        const response = await fetch(`${API_BASE}/auth/validate`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Token validation failed:', error);
+        return false;
+    }
+}
+
+function clearAuthData() {
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('authToken');
+    isAuthenticated = false;
+    currentUser = null;
+    authToken = null;
+}
+
+function showAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+
+function hideAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+}
+
+function switchAuthTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector(`[onclick="switchAuthTab('${tabName}')"]`).classList.add('active');
+
+    // Update forms
+    document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+    document.getElementById(tabName + 'Form').classList.add('active');
+}
+
+function showMainApp() {
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('authHeader').style.display = 'flex';
+    document.getElementById('userName').textContent = currentUser?.name || currentUser?.email || 'User';
+    hideAuthModal();
+}
+
+function showWelcomeScreen() {
+    document.getElementById('welcomeScreen').style.display = 'block';
+    document.getElementById('mainContent').style.display = 'none';
+    document.getElementById('authHeader').style.display = 'none';
+    showAuthModal();
+}
+
+function signOut() {
+    if (confirm('Are you sure you want to sign out?')) {
+        clearAuthData();
+        showWelcomeScreen();
+        showNotification('Signed out successfully!');
+    }
+}
+
+// Real authentication handlers
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const loginData = {
+        email: formData.get('email'),
+        password: formData.get('password')
+    };
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loginData)
+        });
+
+        if (response.ok) {
+            const authResponse = await response.json();
+
+            // Store auth data
+            sessionStorage.setItem('currentUser', JSON.stringify({
+                id: authResponse.id,
+                name: authResponse.name,
+                email: authResponse.email
+            }));
+            sessionStorage.setItem('authToken', authResponse.token);
+
+            currentUser = {
+                id: authResponse.id,
+                name: authResponse.name,
+                email: authResponse.email
+            };
+            authToken = authResponse.token;
+            isAuthenticated = true;
+
+            showNotification('Signed in successfully!');
+            showMainApp();
+            document.getElementById('loginForm').reset();
+        } else {
+            const errorText = await response.text();
+            showNotification(errorText || 'Sign in failed', 'alert');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Network error. Please try again.', 'alert');
+    }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const registerData = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        confirmPassword: formData.get('confirmPassword')
+    };
+
+    if (registerData.password !== registerData.confirmPassword) {
+        showNotification('Passwords do not match!', 'alert');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(registerData)
+        });
+
+        if (response.ok) {
+            const authResponse = await response.json();
+
+            // Store auth data
+            sessionStorage.setItem('currentUser', JSON.stringify({
+                id: authResponse.id,
+                name: authResponse.name,
+                email: authResponse.email
+            }));
+            sessionStorage.setItem('authToken', authResponse.token);
+
+            currentUser = {
+                id: authResponse.id,
+                name: authResponse.name,
+                email: authResponse.email
+            };
+            authToken = authResponse.token;
+            isAuthenticated = true;
+
+            showNotification('Account created successfully!');
+            showMainApp();
+            document.getElementById('registerForm').reset();
+        } else {
+            const errorText = await response.text();
+            showNotification(errorText || 'Registration failed', 'alert');
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        showNotification('Network error. Please try again.', 'alert');
+    }
+});
+
+// Auth guard for API calls
+function makeAuthenticatedRequest(url, options = {}) {
+    if (!isAuthenticated || !authToken) {
+        showNotification('Please sign in to continue', 'alert');
+        showWelcomeScreen();
+        return Promise.reject(new Error('Not authenticated'));
+    }
+
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            ...options.headers
+        }
+    };
+
+    return fetch(url, { ...options, ...defaultOptions });
+}
 
 function showTab(tabName) {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to access tasks', 'alert');
+        return;
+    }
+
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
 
@@ -15,6 +245,7 @@ function showTab(tabName) {
     if (tabName === 'view') {
         loadTasks();
     } else if (tabName === 'stats') {
+        updateStatistics();
     }
 }
 
@@ -34,6 +265,8 @@ function showNotification(message, type = 'info') {
 }
 
 function checkTaskNotifications() {
+    if (!isAuthenticated) return;
+
     const now = new Date();
     tasks.forEach(task => {
         if (!task.done) {
@@ -58,6 +291,11 @@ setInterval(checkTaskNotifications, 30000);
 document.getElementById('taskForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!isAuthenticated) {
+        showNotification('Please sign in to add tasks', 'alert');
+        return;
+    }
+
     const formData = new FormData(e.target);
     const taskData = {
         description: formData.get('description'),
@@ -70,9 +308,8 @@ document.getElementById('taskForm').addEventListener('submit', async (e) => {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/add`, {
+        const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/add`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskData)
         });
 
@@ -81,16 +318,22 @@ document.getElementById('taskForm').addEventListener('submit', async (e) => {
             resetForm();
             showTab('view');
         } else {
-            const errorData = await response.json();
-            showNotification(`Failed to add task: ${errorData.message || 'Unknown error'}`, 'alert');
+            const errorData = await response.text();
+            showNotification(`Failed to add task: ${errorData}`, 'alert');
         }
     } catch (error) {
+        if (error.message === 'Not authenticated') return;
         showNotification('Error connecting to server', 'alert');
     }
 });
 
 document.getElementById('editTaskForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+        showNotification('Please sign in to edit tasks', 'alert');
+        return;
+    }
 
     const formData = new FormData(e.target);
     const taskId = document.getElementById('editTaskId').value;
@@ -105,9 +348,8 @@ document.getElementById('editTaskForm').addEventListener('submit', async (e) => 
     };
 
     try {
-        const response = await fetch(`${API_BASE}/edit/${taskId}`, {
+        const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/edit/${taskId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskData)
         });
 
@@ -116,10 +358,11 @@ document.getElementById('editTaskForm').addEventListener('submit', async (e) => 
             closeEditModal();
             loadTasks();
         } else {
-            const errorData = await response.json();
-            showNotification(`Failed to update task: ${errorData.message || 'Unknown error'}`, 'alert');
+            const errorData = await response.text();
+            showNotification(`Failed to update task: ${errorData}`, 'alert');
         }
     } catch (error) {
+        if (error.message === 'Not authenticated') return;
         showNotification('Error connecting to server', 'alert');
     }
 });
@@ -129,8 +372,13 @@ function resetForm() {
 }
 
 async function loadTasks() {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to view tasks', 'alert');
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE}/all`);
+        const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/all`);
         if (response.ok) {
             tasks = await response.json();
             displayTasks(tasks);
@@ -139,6 +387,7 @@ async function loadTasks() {
             showNotification('Failed to load tasks', 'alert');
         }
     } catch (error) {
+        if (error.message === 'Not authenticated') return;
         showNotification('Error connecting to server', 'alert');
     }
 }
@@ -182,14 +431,18 @@ function displayTasks(tasksToShow, containerId = 'tasksContainer') {
     });
 }
 
-// ✨ FIX: This is now the one and only version of this function.
 function displaySearchResults(searchResults) {
     displayTasks(searchResults, 'searchResults');
 }
 
 async function toggleTaskStatus(taskId) {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to update tasks', 'alert');
+        return;
+    }
+
     try {
-        const response = await fetch(`${API_BASE}/toggle/${taskId}`, { method: 'PUT' });
+        const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/toggle/${taskId}`, { method: 'PUT' });
         if (response.ok) {
             showNotification('Task status updated!');
             loadTasks();
@@ -197,14 +450,20 @@ async function toggleTaskStatus(taskId) {
             showNotification('Failed to update task status', 'alert');
         }
     } catch (error) {
+        if (error.message === 'Not authenticated') return;
         showNotification('Error connecting to server', 'alert');
     }
 }
 
 async function deleteTask(taskId) {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to delete tasks', 'alert');
+        return;
+    }
+
     if (confirm('Are you sure you want to delete this task?')) {
         try {
-            const response = await fetch(`${API_BASE}/delete/${taskId}`, { method: 'DELETE' });
+            const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/delete/${taskId}`, { method: 'DELETE' });
             if (response.ok) {
                 showNotification('Task deleted successfully!');
                 loadTasks();
@@ -212,12 +471,18 @@ async function deleteTask(taskId) {
                 showNotification('Failed to delete task', 'alert');
             }
         } catch (error) {
+            if (error.message === 'Not authenticated') return;
             showNotification('Error connecting to server', 'alert');
         }
     }
 }
 
 function editTask(taskId) {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to edit tasks', 'alert');
+        return;
+    }
+
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -236,8 +501,12 @@ function closeEditModal() {
     document.getElementById('editModal').style.display = 'none';
 }
 
-// ✨ FIX: Improved search function for better UX.
 async function searchTask() {
+    if (!isAuthenticated) {
+        showNotification('Please sign in to search tasks', 'alert');
+        return;
+    }
+
     const taskId = document.getElementById('searchId').value;
     if (!taskId) {
         showNotification('Please enter a task ID', 'alert');
@@ -245,25 +514,24 @@ async function searchTask() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/get/${taskId}`);
+        const response = await makeAuthenticatedRequest(`${API_BASE}/tasks/get/${taskId}`);
         if (response.ok) {
             const task = await response.json();
-            displaySearchResults([task]); // Display the found task
+            displaySearchResults([task]);
         } else if (response.status === 404) {
-            // The displayTasks function will show the "No tasks found" message,
-            // so the notification is redundant.
             displaySearchResults([]);
         } else {
             showNotification('Failed to search for task', 'alert');
         }
     } catch (error) {
+        if (error.message === 'Not authenticated') return;
         showNotification('Error connecting to server', 'alert');
     }
 }
 
-
-
 function updateStatistics() {
+    if (!isAuthenticated) return;
+
     const total = tasks.length;
     const completed = tasks.filter(t => t.done).length;
     const pending = total - completed;
@@ -288,17 +556,26 @@ function updateStatistics() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    showTab('view');
-    const now = new Date();
-    const startTime = new Date(now.getTime() + 60000);
-    const endTime = new Date(now.getTime() + 3600000);
+    checkAuthStatus();
 
-    document.getElementById('startTime').value = startTime.toISOString().slice(0, 16);
-    document.getElementById('endTime').value = endTime.toISOString().slice(0, 16);
+    if (isAuthenticated) {
+        const now = new Date();
+        const startTime = new Date(now.getTime() + 60000);
+        const endTime = new Date(now.getTime() + 3600000);
+
+        document.getElementById('startTime').value = startTime.toISOString().slice(0, 16);
+        document.getElementById('endTime').value = endTime.toISOString().slice(0, 16);
+    }
 });
 
 document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeEditModal();
+    }
+});
+
+document.getElementById('authModal').addEventListener('click', function(e) {
+    if (e.target === this && currentUser) {
+        hideAuthModal();
     }
 });

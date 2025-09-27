@@ -32,18 +32,33 @@ public class Task {
     @Column(length = 1000)
     private String notes;
 
-    public Task() {}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    public Task(String description, LocalDateTime startTime, LocalDateTime endTime) {
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public Task() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public Task(String description, LocalDateTime startTime, LocalDateTime endTime, User user) {
+        this();
         this.description = description;
         this.startTime = startTime;
         this.endTime = endTime;
         this.done = false;
         this.priority = "Medium";
         this.category = "Personal";
+        this.user = user;
     }
 
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -108,6 +123,35 @@ public class Task {
         this.notes = notes;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
     @Override
     public String toString() {
         return "Task{" +
@@ -119,6 +163,7 @@ public class Task {
                 ", priority='" + priority + '\'' +
                 ", category='" + category + '\'' +
                 ", notes='" + notes + '\'' +
+                ", userId=" + (user != null ? user.getId() : null) +
                 '}';
     }
 }

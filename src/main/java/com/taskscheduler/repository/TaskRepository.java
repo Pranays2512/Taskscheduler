@@ -8,36 +8,49 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    List<Task> findByDone(Boolean done);
+    // Find all tasks for a specific user
+    List<Task> findByUserIdOrderByPriorityAscEndTimeAsc(Long userId);
 
-    List<Task> findByPriority(String priority);
+    // Find task by ID and user ID
+    Optional<Task> findByIdAndUserId(Long id, Long userId);
 
-    List<Task> findByCategory(String category);
+    // Find tasks by status and user
+    List<Task> findByDoneAndUserId(Boolean done, Long userId);
 
+    // Find tasks by priority and user
+    List<Task> findByPriorityAndUserId(String priority, Long userId);
 
-    @Query("SELECT t FROM Task t WHERE t.done = false AND t.endTime < :currentTime")
-    List<Task> findOverdueTasks(@Param("currentTime") LocalDateTime currentTime);
+    // Find tasks by category and user
+    List<Task> findByCategoryAndUserId(String category, Long userId);
 
-    @Query("SELECT t FROM Task t WHERE t.done = false AND t.startTime BETWEEN :now AND :future")
-    List<Task> findTasksStartingSoon(@Param("now") LocalDateTime now, @Param("future") LocalDateTime future);
+    // Custom queries for user-specific data
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.done = false AND t.endTime < :currentTime")
+    List<Task> findOverdueTasksByUserId(@Param("userId") Long userId, @Param("currentTime") LocalDateTime currentTime);
 
-    @Query("SELECT t FROM Task t WHERE t.startTime >= :start AND t.startTime <= :end")
-    List<Task> findTasksBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.done = false AND t.startTime BETWEEN :now AND :future")
+    List<Task> findTasksStartingSoonByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now, @Param("future") LocalDateTime future);
 
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.startTime >= :start AND t.startTime <= :end")
+    List<Task> findTasksBetweenByUserId(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    Long countByDone(Boolean done);
+    // Count queries for user-specific statistics
+    Long countByUserIdAndDone(Long userId, Boolean done);
 
-    Long countByPriority(String priority);
+    Long countByUserIdAndPriority(Long userId, String priority);
 
-    Long countByCategory(String category);
+    Long countByUserIdAndCategory(Long userId, String category);
 
-    @Query("SELECT count(t) FROM Task t WHERE t.done = false AND t.endTime < :currentTime")
-    long countOverdueTasks(@Param("currentTime") LocalDateTime currentTime);
+    @Query("SELECT count(t) FROM Task t WHERE t.user.id = :userId AND t.done = false AND t.endTime < :currentTime")
+    long countOverdueTasksByUserId(@Param("userId") Long userId, @Param("currentTime") LocalDateTime currentTime);
 
-    @Query("SELECT count(t) FROM Task t WHERE t.startTime >= :start AND t.startTime <= :end")
-    long countTasksBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    @Query("SELECT count(t) FROM Task t WHERE t.user.id = :userId AND t.startTime >= :start AND t.startTime <= :end")
+    long countTasksBetweenByUserId(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // Check if task exists and belongs to user
+    boolean existsByIdAndUserId(Long id, Long userId);
 }
